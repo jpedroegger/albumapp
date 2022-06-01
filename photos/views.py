@@ -1,25 +1,33 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, Http404, get_object_or_404
 from .models import Category, Photo
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 
 
+@login_required(login_url='accounts/login')
 def gallery(request):
     category = request.GET.get('category')
 
     if category == None:
-        photos = Photo.objects.all()
+        photos = Photo.objects.filter(user=request.user)
     else:
-        photos = Photo.objects.filter(category__name=category)
-
+        photos = Photo.objects.filter(
+            Q(category__name=category) &
+            Q(user=request.user)
+        )
+            
     categories = Category.objects.all()
     context = {'categories': categories, 'photos': photos}
     return render(request, 'photos/gallery.html', context)
 
+def view_photo(request, pk):    
+    photo = get_object_or_404(Photo, id=pk)
+    
+    if request.user != photo.user: 
+        raise Http404()
 
-def view_photo(request, pk):
-    photo = Photo.objects.get(id=pk)
     return render(request, 'photos/photo.html', {'photo': photo})
-
 
 def add_photo(request):
     categories = Category.objects.all()
@@ -41,8 +49,10 @@ def add_photo(request):
             category=category,
             description=data['description'],
             image=image,
+            user=request.user,
         )
 
+        messages.success(request, 'New Photo created.')
         return redirect('gallery')
 
     context = {'categories': categories}
