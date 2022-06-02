@@ -1,1 +1,11 @@
 .env
+
+.coverage
+
+venv
+
+db.sqlite3
+
+templates\static\image
+
+__pycache__/
